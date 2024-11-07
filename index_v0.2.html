@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>拖拽式表单生成器</title>
+    <style>
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            margin: 20px auto;
+            max-width: 1400px;
+            min-height: 600px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .components {
+            width: 280px;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            padding: 16px;
+            background: #fafafa;
+        }
+
+        .form-area {
+            flex: 1;
+            border: 1px dashed #d9d9d9;
+            margin-left: 24px;
+            padding: 20px;
+            min-height: 600px;
+            border-radius: 4px;
+            background: #ffffff;
+            transition: all 0.3s;
+        }
+
+        .form-area:hover {
+            border-color: #40a9ff;
+        }
+
+        .component-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            cursor: move;
+            transition: all 0.3s;
+        }
+
+        .component-item:hover {
+            border-color: #40a9ff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+        }
+
+        .form-item {
+            padding: 16px;
+            margin: 12px 0;
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .form-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+        }
+
+        .form-area:empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .form-area:empty:after {
+            content: '拖拽组件到这里';
+            font-size: 16px;
+        }
+
+        .form-item + .form-item {
+            margin-top: 12px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #ff4d4f;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 77, 79, 0.1);
+        }
+
+        /* 表单控件样式 */
+        input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            margin-top: 4px;
+            transition: all 0.3s;
+        }
+        
+        textarea {
+            height: 50px;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            margin-top: 4px;
+            transition: all 0.3s;
+            resize: vertical;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            margin-top: 4px;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            border-color: #40a9ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+            outline: none;
+        }
+
+        label {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        label.required:after {
+            content: '*';
+            color: #ff4d4f;
+            margin-left: 4px;
+        }
+
+        input[type="radio"],
+        input[type="checkbox"] {
+            margin-right: 6px;
+        }
+
+        .insert-indicator {
+            height: 2px;
+            background: #1890ff;
+            margin: 8px 0;
+            display: none;
+        }
+
+        .config-panel {
+            width: 300px;
+            margin-left: 24px;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            padding: 16px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .config-panel h3 {
+            margin: 0 0 20px 0;
+            color: #1890ff;
+            font-size: 18px;
+            border-bottom: 2px solid #1890ff;
+            padding-bottom: 8px;
+        }
+
+        .config-item {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #fafafa;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .config-item:hover {
+            background: #f0f7ff;
+        }
+
+        .config-item label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        .config-item input,
+        .config-item textarea,
+        .config-item select {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .validation-error {
+            color: #ff4d4f;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .style-config {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .style-config input {
+            width: 80px;
+        }
+
+        .style-config label {
+            font-size: 12px;
+        }
+
+        .validation-test {
+            margin-top: 8px;
+            padding: 8px;
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            border-radius: 4px;
+        }
+
+        .no-component-selected {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+
+        .custom-validation {
+            margin-top: 12px;
+        }
+
+        .custom-validation input {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="components" id="componentList">
+            <div class="component-item" draggable="true" data-type="text">
+                <label>文本输入：</label>
+                <input type="text" placeholder="请输入文本">
+            </div>
+            <div class="component-item" draggable="true" data-type="textarea">
+                <label>多行文本：</label>
+                <textarea placeholder="请输入多行文本"></textarea>
+            </div>
+            <div class="component-item" draggable="true" data-type="select">
+                <label>下拉选择：</label>
+                <select>
+                    <option>选项1</option>
+                    <option>选项2</option>
+                </select>
+            </div>
+            <div class="component-item" draggable="true" data-type="radio">
+                <label>单选：</label>
+                <input type="radio" name="radio">选项1
+                <input type="radio" name="radio">选项2
+            </div>
+            <div class="component-item" draggable="true" data-type="checkbox">
+                <label>复选：</label>
+                <input type="checkbox">选项1
+                <input type="checkbox">选项2
+            </div>
+        </div>
+        <div class="form-area" id="formArea"></div>
+        
+        <div class="config-panel" id="configPanel">
+            <h3>组件配置</h3>
+            <div class="no-component-selected" id="noComponentSelected">
+                请选择一个组件进行配置
+            </div>
+            <div id="componentConfig" style="display: none;">
+                <div class="config-item">
+                    <label>标签名称：</label>
+                    <input type="text" id="labelText">
+                </div>
+                <div class="config-item" id="placeholderConfig">
+                    <label>提示文本：</label>
+                    <input type="text" id="placeholder">
+                </div>
+                <div class="config-item" id="defaultValueConfig">
+                    <label>默认值：</label>
+                    <input type="text" id="defaultValue">
+                </div>
+                <div class="config-item" id="optionsConfig">
+                    <label>选项配置（每行一个选项）：</label>
+                    <textarea id="options" rows="5" placeholder="请输入选项，每行一个"></textarea>
+                </div>
+                <div class="config-item">
+                    <label>是否必填：</label>
+                    <input type="checkbox" id="required">
+                </div>
+                <div class="config-item" id="styleConfig">
+                    <label>样式配置：</label>
+                    <div class="style-config">
+                        <div>
+                            <label>宽度</label>
+                            <input type="text" id="width" placeholder="如: 200px">
+                        </div>
+                        <div>
+                            <label>高度</label>
+                            <input type="text" id="height" placeholder="如: 32px">
+                        </div>
+                    </div>
+                    <div class="style-config">
+                        <div>
+                            <label>字体大小</label>
+                            <input type="text" id="fontSize" placeholder="如: 14px">
+                        </div>
+                        <div>
+                            <label>字体颜色</label>
+                            <input type="color" id="color">
+                        </div>
+                    </div>
+                </div>
+                <div class="config-item" id="validationConfig">
+                    <label>验证规则：</label>
+                    <select id="validation">
+                        <option value="">无</option>
+                        <option value="email">邮箱</option>
+                        <option value="phone">手机号</option>
+                        <option value="number">数字</option>
+                        <option value="custom">自定义正则</option>
+                    </select>
+                    <div class="custom-validation" id="customValidation" style="display: none;">
+                        <input type="text" id="customRegex" placeholder="输入正则表达式">
+                        <input type="text" id="customMessage" placeholder="输入错误提示信息">
+                    </div>
+                    <div class="validation-test" id="validationTest">
+                        <input type="text" placeholder="在此测试验证规则">
+                        <div class="validation-error"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const componentList = document.getElementById('componentList');
+            const formArea = document.getElementById('formArea');
+            const configPanel = document.getElementById('configPanel');
+            const componentConfig = document.getElementById('componentConfig');
+            const noComponentSelected = document.getElementById('noComponentSelected');
+            let insertIndicator = document.createElement('div');
+            insertIndicator.className = 'insert-indicator';
+            let selectedFormItem = null;
+
+            // 为组件列表项添加拖拽事件
+            componentList.querySelectorAll('.component-item').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', this.dataset.type);
+                });
+            });
+
+            // 表单区域的拖拽事件
+            formArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const closestItem = e.target.closest('.form-item');
+                if (closestItem) {
+                    const rect = closestItem.getBoundingClientRect();
+                    const middle = rect.top + rect.height / 2;
+                    
+                    if (e.clientY < middle) {
+                        closestItem.before(insertIndicator);
+                    } else {
+                        closestItem.after(insertIndicator);
+                    }
+                    insertIndicator.style.display = 'block';
+                }
+            });
+
+            formArea.addEventListener('dragleave', function(e) {
+                if (!formArea.contains(e.relatedTarget)) {
+                    insertIndicator.style.display = 'none';
+                }
+            });
+
+            formArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const type = e.dataTransfer.getData('text/plain');
+                if (type && type !== 'move') {
+                    const formItem = createFormItem(type);
+                    if (insertIndicator.style.display === 'block') {
+                        insertIndicator.replaceWith(formItem);
+                    } else {
+                        formArea.appendChild(formItem);
+                    }
+                }
+                insertIndicator.style.display = 'none';
+            });
+
+            // 创建表单项
+            function createFormItem(type) {
+                const div = document.createElement('div');
+                div.className = 'form-item';
+                div.draggable = true;
+                div.dataset.type = type;
+
+                // 添加删除按钮
+                const deleteBtn = document.createElement('span');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.onclick = function() {
+                    div.remove();
+                    if (selectedFormItem === div) {
+                        selectedFormItem = null;
+                        componentConfig.style.display = 'none';
+                        noComponentSelected.style.display = 'block';
+                    }
+                };
+
+                let content = '';
+                switch(type) {
+                    case 'text':
+                        content = '<label>文本输入：</label><input type="text" placeholder="请输入">';
+                        break;
+                    case 'textarea':
+                        content = '<label>多行文本：</label><textarea placeholder="请输入"></textarea>';
+                        break;
+                    case 'select':
+                        content = '<label>下拉选择：</label><select><option value="">请选择</option><option>选项1</option><option>选项2</option></select>';
+                        break;
+                    case 'radio':
+                        content = '<label>单选：</label><input type="radio" name="radio">选项1 <input type="radio" name="radio">选项2';
+                        break;
+                    case 'checkbox':
+                        content = '<label>复选：</label><input type="checkbox">选项1 <input type="checkbox">选项2';
+                        break;
+                }
+
+                div.innerHTML = content;
+                div.appendChild(deleteBtn);
+
+                // 点击选中表单项
+                div.addEventListener('click', function() {
+                    if (selectedFormItem) {
+                        selectedFormItem.style.borderColor = '#e8e8e8';
+                    }
+                    selectedFormItem = this;
+                    this.style.borderColor = '#1890ff';
+                    componentConfig.style.display = 'block';
+                    noComponentSelected.style.display = 'none';
+                    updateConfigPanel(this);
+                });
+
+                // 添加表单项的拖拽排序功能
+                div.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', 'move');
+                    this.style.opacity = '0.4';
+                });
+
+                div.addEventListener('dragend', function(e) {
+                    this.style.opacity = '1';
+                });
+
+                return div;
+            }
+
+            // 更新配置面板
+            function updateConfigPanel(formItem) {
+                const labelText = document.getElementById('labelText');
+                const placeholder = document.getElementById('placeholder');
+                const defaultValue = document.getElementById('defaultValue');
+                const options = document.getElementById('options');
+                const required = document.getElementById('required');
+                const validation = document.getElementById('validation');
+                const customValidation = document.getElementById('customValidation');
+                const validationTest = document.getElementById('validationTest');
+                const testInput = validationTest.querySelector('input');
+                const errorDiv = validationTest.querySelector('.validation-error');
+
+                // 显示/隐藏配置项
+                document.getElementById('placeholderConfig').style.display = 'none';
+                document.getElementById('defaultValueConfig').style.display = 'none';
+                document.getElementById('optionsConfig').style.display = 'none';
+                document.getElementById('validationConfig').style.display = 'none';
+                document.getElementById('styleConfig').style.display = 'block';
+
+                if (!formItem) {
+                    componentConfig.style.display = 'none';
+                    noComponentSelected.style.display = 'block';
+                    return;
+                }
+
+                const type = formItem.dataset.type;
+                const label = formItem.querySelector('label');
+                const input = formItem.querySelector('input, textarea, select');
+
+                labelText.value = label.textContent;
+                required.checked = label.classList.contains('required');
+
+                // 根据类型显示相应配置项
+                switch(type) {
+                    case 'text':
+                    case 'textarea':
+                        document.getElementById('placeholderConfig').style.display = 'block';
+                        document.getElementById('defaultValueConfig').style.display = 'block';
+                        document.getElementById('validationConfig').style.display = 'block';
+                        placeholder.value = input.placeholder || '';
+                        defaultValue.value = input.value || '';
+                        break;
+                    case 'select':
+                    case 'radio':
+                    case 'checkbox':
+                        document.getElementById('optionsConfig').style.display = 'block';
+                        let optionsText = '';
+                        if (type === 'select') {
+                            formItem.querySelectorAll('option').forEach(option => {
+                                if(option.value !== '') {
+                                    optionsText += option.textContent + '\n';
+                                }
+                            });
+                        } else {
+                            const inputs = formItem.querySelectorAll('input');
+                            inputs.forEach(input => {
+                                if (input.nextSibling) {
+                                    optionsText += input.nextSibling.textContent.trim() + '\n';
+                                }
+                            });
+                        }
+                        options.value = optionsText.trim();
+                        break;
+                }
+
+                // 样式配置
+                const width = document.getElementById('width');
+                const height = document.getElementById('height');
+                const fontSize = document.getElementById('fontSize');
+                const color = document.getElementById('color');
+
+                width.value = input.style.width;
+                height.value = input.style.height;
+                fontSize.value = input.style.fontSize;
+                color.value = input.style.color;
+
+                // 配置更改事件
+                labelText.oninput = () => {
+                    label.textContent = labelText.value;
+                };
+
+                placeholder.oninput = () => {
+                    if (input.tagName !== 'SELECT') {
+                        input.placeholder = placeholder.value;
+                    }
+                };
+
+                defaultValue.oninput = () => {
+                    if (input.tagName !== 'SELECT') {
+                        input.value = defaultValue.value;
+                    }
+                };
+
+                options.oninput = () => {
+                    if (type === 'select') {
+                        input.innerHTML = '<option value="">请选择</option>' + 
+                            options.value.split('\n').map(opt => 
+                                `<option>${opt}</option>`
+                            ).join('');
+                    } else {
+                        const optionsArray = options.value.split('\n');
+                        const inputName = type === 'radio' ? 'radio-' + Date.now() : '';
+                        const labelContent = label.textContent;
+                        const isRequired = label.classList.contains('required');
+                        formItem.innerHTML = `<label ${isRequired ? 'class="required"' : ''}>${labelContent}</label>` +
+                            optionsArray.map(opt => 
+                                `<input type="${type}" name="${inputName}">${opt}`
+                            ).join(' ');
+                        formItem.appendChild(deleteBtn);
+                    }
+                };
+
+                required.onchange = () => {
+                    if (required.checked) {
+                        label.classList.add('required');
+                        input.required = true;
+                    } else {
+                        label.classList.remove('required');
+                        input.required = false;
+                    }
+                };
+
+                // 验证规则配置
+                validation.onchange = () => {
+                    const value = validation.value;
+                    customValidation.style.display = value === 'custom' ? 'block' : 'none';
+                    
+                    if (input.tagName === 'INPUT') {
+                        input.dataset.validation = value;
+                        testInput.dataset.validation = value;
+                        
+                        if (value === 'custom') {
+                            const regex = document.getElementById('customRegex').value;
+                            const message = document.getElementById('customMessage').value;
+                            input.dataset.regex = regex;
+                            input.dataset.message = message;
+                            testInput.dataset.regex = regex;
+                            testInput.dataset.message = message;
+                        }
+                    }
+                };
+
+                // 验证测试
+                testInput.oninput = () => {
+                    const value = testInput.value;
+                    const validationType = testInput.dataset.validation;
+                    let isValid = true;
+                    let message = '';
+
+                    switch(validationType) {
+                        case 'email':
+                            isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+                            message = '请输入有效的邮箱地址';
+                            break;
+                        case 'phone':
+                            isValid = /^1[3-9]\d{9}$/.test(value);
+                            message = '请输入有效的手机号码';
+                            break;
+                        case 'number':
+                            isValid = /^\d+$/.test(value);
+                            message = '请输入数字';
+                            break;
+                        case 'custom':
+                            try {
+                                const regex = new RegExp(testInput.dataset.regex);
+                                isValid = regex.test(value);
+                                message = testInput.dataset.message || '验证失败';
+                            } catch(e) {
+                                isValid = false;
+                                message = '无效的正则表达式';
+                            }
+                            break;
+                    }
+
+                    if (!isValid && value) {
+                        errorDiv.textContent = message;
+                        errorDiv.style.display = 'block';
+                    } else {
+                        errorDiv.style.display = 'none';
+                    }
+                };
+
+                // 样式配置事件
+                width.oninput = () => input.style.width = width.value;
+                height.oninput = () => input.style.height = height.value;
+                fontSize.oninput = () => input.style.fontSize = fontSize.value;
+                color.oninput = () => input.style.color = color.value;
+            }
+
+            // 表单项之间的排序
+            let draggedItem = null;
+            
+            formArea.addEventListener('dragstart', function(e) {
+                draggedItem = e.target.closest('.form-item');
+            });
+
+            formArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (!draggedItem) return;
+                
+                const closestItem = e.target.closest('.form-item');
+                if (closestItem && closestItem !== draggedItem) {
+                    const rect = closestItem.getBoundingClientRect();
+                    const middle = rect.top + rect.height / 2;
+                    if (e.clientY < middle) {
+                        formArea.insertBefore(draggedItem, closestItem);
+                    } else {
+                        formArea.insertBefore(draggedItem, closestItem.nextSibling);
+                    }
+                }
+            });
+
+            formArea.addEventListener('dragend', function() {
+                draggedItem = null;
+                insertIndicator.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
