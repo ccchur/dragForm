@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>拖拽式表单生成器</title>
     <style>
+        /* 保持原有样式不变 */
         body {
             background: #f0f2f5;
             margin: 0;
@@ -212,12 +213,6 @@
             box-sizing: border-box;
         }
 
-        .validation-error {
-            color: #ff4d4f;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-
         .style-config {
             display: flex;
             gap: 8px;
@@ -232,26 +227,31 @@
             font-size: 12px;
         }
 
-        .validation-test {
-            margin-top: 8px;
-            padding: 8px;
-            background: #f6ffed;
-            border: 1px solid #b7eb8f;
-            border-radius: 4px;
-        }
-
         .no-component-selected {
             text-align: center;
             color: #999;
             padding: 20px;
         }
 
-        .custom-validation {
-            margin-top: 12px;
+        /* 导出按钮样式 */
+        .export-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+            transition: all 0.3s;
         }
 
-        .custom-validation input {
-            margin-bottom: 8px;
+        .export-btn:hover {
+            background: #40a9ff;
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
         }
     </style>
 </head>
@@ -335,27 +335,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="config-item" id="validationConfig">
-                    <label>验证规则：</label>
-                    <select id="validation">
-                        <option value="">无</option>
-                        <option value="email">邮箱</option>
-                        <option value="phone">手机号</option>
-                        <option value="number">数字</option>
-                        <option value="custom">自定义正则</option>
-                    </select>
-                    <div class="custom-validation" id="customValidation" style="display: none;">
-                        <input type="text" id="customRegex" placeholder="输入正则表达式">
-                        <input type="text" id="customMessage" placeholder="输入错误提示信息">
-                    </div>
-                    <div class="validation-test" id="validationTest">
-                        <input type="text" placeholder="在此测试验证规则">
-                        <div class="validation-error"></div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
+
+    <button class="export-btn" onclick="exportForm()">导出表单</button>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -489,17 +473,11 @@
                 const defaultValue = document.getElementById('defaultValue');
                 const options = document.getElementById('options');
                 const required = document.getElementById('required');
-                const validation = document.getElementById('validation');
-                const customValidation = document.getElementById('customValidation');
-                const validationTest = document.getElementById('validationTest');
-                const testInput = validationTest.querySelector('input');
-                const errorDiv = validationTest.querySelector('.validation-error');
 
                 // 显示/隐藏配置项
                 document.getElementById('placeholderConfig').style.display = 'none';
                 document.getElementById('defaultValueConfig').style.display = 'none';
                 document.getElementById('optionsConfig').style.display = 'none';
-                document.getElementById('validationConfig').style.display = 'none';
                 document.getElementById('styleConfig').style.display = 'block';
 
                 if (!formItem) {
@@ -521,7 +499,6 @@
                     case 'textarea':
                         document.getElementById('placeholderConfig').style.display = 'block';
                         document.getElementById('defaultValueConfig').style.display = 'block';
-                        document.getElementById('validationConfig').style.display = 'block';
                         placeholder.value = input.placeholder || '';
                         defaultValue.value = input.value || '';
                         break;
@@ -557,7 +534,7 @@
                 width.value = input.style.width;
                 height.value = input.style.height;
                 fontSize.value = input.style.fontSize;
-                color.value = input.style.color;
+                color.value = input.style.color || '#000000';
 
                 // 配置更改事件
                 labelText.oninput = () => {
@@ -598,74 +575,12 @@
                 required.onchange = () => {
                     if (required.checked) {
                         label.classList.add('required');
-                        input.required = true;
                     } else {
                         label.classList.remove('required');
-                        input.required = false;
                     }
                 };
 
-                // 验证规则配置
-                validation.onchange = () => {
-                    const value = validation.value;
-                    customValidation.style.display = value === 'custom' ? 'block' : 'none';
-                    
-                    if (input.tagName === 'INPUT') {
-                        input.dataset.validation = value;
-                        testInput.dataset.validation = value;
-                        
-                        if (value === 'custom') {
-                            const regex = document.getElementById('customRegex').value;
-                            const message = document.getElementById('customMessage').value;
-                            input.dataset.regex = regex;
-                            input.dataset.message = message;
-                            testInput.dataset.regex = regex;
-                            testInput.dataset.message = message;
-                        }
-                    }
-                };
-
-                // 验证测试
-                testInput.oninput = () => {
-                    const value = testInput.value;
-                    const validationType = testInput.dataset.validation;
-                    let isValid = true;
-                    let message = '';
-
-                    switch(validationType) {
-                        case 'email':
-                            isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-                            message = '请输入有效的邮箱地址';
-                            break;
-                        case 'phone':
-                            isValid = /^1[3-9]\d{9}$/.test(value);
-                            message = '请输入有效的手机号码';
-                            break;
-                        case 'number':
-                            isValid = /^\d+$/.test(value);
-                            message = '请输入数字';
-                            break;
-                        case 'custom':
-                            try {
-                                const regex = new RegExp(testInput.dataset.regex);
-                                isValid = regex.test(value);
-                                message = testInput.dataset.message || '验证失败';
-                            } catch(e) {
-                                isValid = false;
-                                message = '无效的正则表达式';
-                            }
-                            break;
-                    }
-
-                    if (!isValid && value) {
-                        errorDiv.textContent = message;
-                        errorDiv.style.display = 'block';
-                    } else {
-                        errorDiv.style.display = 'none';
-                    }
-                };
-
-                // 样式配置事件
+                // 样式配置件
                 width.oninput = () => input.style.width = width.value;
                 height.oninput = () => input.style.height = height.value;
                 fontSize.oninput = () => input.style.fontSize = fontSize.value;
@@ -699,7 +614,110 @@
                 draggedItem = null;
                 insertIndicator.style.display = 'none';
             });
+
+            
         });
+
+        // 导出表单功能
+        function exportForm() {
+            const formArea = document.getElementById('formArea');
+            
+            // 创建一个新的div用于存放导出的表单
+            let exportDiv = document.createElement('div');
+            exportDiv.className = 'exported-form';
+            
+            // 复制表单区域的内容
+            let formContent = formArea.cloneNode(true);
+            
+            // 移除拖拽相关属性和删除按钮
+            formContent.querySelectorAll('.form-item').forEach(item => {
+                item.removeAttribute('draggable');
+                const deleteBtn = item.querySelector('.delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.remove();
+                }
+            });
+            
+            // 创建样式标签
+            let styleTag = document.createElement('style');
+            styleTag.textContent = `
+                .exported-form {
+                    padding: 20px;
+                }
+                .form-item {
+                    margin-bottom: 15px;
+                    position: relative;
+                }
+                .form-item label {
+                    display: block;
+                    margin-bottom: 5px;
+                }
+                .form-item label.required::after {
+                    content: "*";
+                    color: red;
+                    margin-left: 4px;
+                }
+                .form-item input[type="text"],
+                .form-item input[type="number"],
+                .form-item textarea,
+                .form-item select {
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                }
+                .submit-btn {
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    margin-top: 20px;
+                }
+                .submit-btn:hover {
+                    background-color: #45a049;
+                }
+            `;
+            
+            // 创建提交按钮
+            let submitButton = document.createElement('button');
+            submitButton.className = 'submit-btn';
+            submitButton.textContent = '提交';
+            submitButton.type = 'submit';
+            formContent.appendChild(submitButton);
+            
+            // 创建包含完整HTML的字符串
+            let exportHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>导出的表单</title>
+                    ${styleTag.outerHTML}
+                </head>
+                <body>
+                    ${formContent.outerHTML}
+                </body>
+                </html>
+            `;
+            
+            // 创建Blob对象
+            const blob = new Blob([exportHTML], { type: 'text/html' });
+            
+            // 创建下载链接
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = 'exported_form.html';
+            
+            // 触发下载
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // 清理URL对象
+            URL.revokeObjectURL(downloadLink.href);
+        }
     </script>
 </body>
 </html>
